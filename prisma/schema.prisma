@@ -1,0 +1,302 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole  @default(STUDENT)
+  aptosWallet   String?   @unique
+  bio           String?
+  website       String?
+  linkedin      String?
+  twitter       String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Instructor relationships
+  coursesCreated Course[] @relation("CourseInstructor")
+  
+  // Student relationships
+  enrollments   Enrollment[]
+  
+  // LMS Builder relationships
+  courseTemplates CourseTemplate[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum UserRole {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+model Course {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  slug        String      @unique
+  thumbnail   String?
+  price       Float       // Price in APT
+  aptosPrice  String?     // Price in APT as string for precision
+  
+  status      CourseStatus @default(DRAFT)
+  featured    Boolean     @default(false)
+  
+  // Blockchain data
+  aptosContractAddress String?
+  aptosCourseId       String?
+  
+  // Course structure
+  lessons     Lesson[]
+  sections    Section[]
+  
+  // Relationships
+  instructorId String
+  instructor   User @relation("CourseInstructor", fields: [instructorId], references: [id])
+  
+  enrollments  Enrollment[]
+  reviews      Review[]
+  
+  // Template relationship (if created from template)
+  templateId   String?
+  template     CourseTemplate? @relation(fields: [templateId], references: [id])
+  
+  // Metadata
+  duration     Int?        // Duration in minutes
+  level        CourseLevel @default(BEGINNER)
+  category     String?
+  tags         String[]
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model Section {
+  id          String @id @default(cuid())
+  title       String
+  description String?
+  order       Int
+  
+  courseId    String
+  course      Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  lessons     Lesson[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Lesson {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  content     Json       // Stores the lesson content structure
+  type        LessonType @default(TEXT)
+  order       Int
+  duration    Int?       // Duration in minutes
+  
+  // File attachments
+  videoUrl    String?
+  attachments String[]   // Array of file URLs
+  
+  courseId    String
+  course      Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  sectionId   String?
+  section     Section? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  
+  // Progress tracking
+  completions LessonCompletion[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum LessonType {
+  TEXT
+  VIDEO
+  QUIZ
+  ASSIGNMENT
+  FILE_DOWNLOAD
+  INTERACTIVE
+}
+
+model LessonCompletion {
+  id        String   @id @default(cuid())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  completed Boolean  @default(false)
+  completedAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, lessonId])
+}
+
+model Enrollment {
+  id          String   @id @default(cuid())
+  
+  studentId   String
+  student     User     @relation(fields: [studentId], references: [id])
+  
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+  
+  // Payment information
+  paymentId   String?  @unique
+  paidAmount  Float?
+  aptosPaymentHash String? // Aptos transaction hash
+  
+  // Progress tracking
+  progress    Float    @default(0) // Percentage 0-100
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  
+  enrolledAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([studentId, courseId])
+}
+
+model Review {
+  id        String @id @default(cuid())
+  rating    Int    // 1-5 stars
+  comment   String?
+  
+  studentId String
+  student   User   @relation(fields: [studentId], references: [id])
+  
+  courseId  String
+  course    Course @relation(fields: [courseId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([studentId, courseId])
+}
+
+// Course Templates for No-Code Builder
+model CourseTemplate {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  category    String
+  thumbnail   String?
+  
+  // Template structure
+  structure   Json   // Stores the course template structure
+  
+  // Usage tracking
+  timesUsed   Int    @default(0)
+  
+  // Relationships
+  creatorId   String
+  creator     User   @relation(fields: [creatorId], references: [id])
+  
+  courses     Course[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Component Library for Drag-and-Drop Builder
+model ComponentLibrary {
+  id          String        @id @default(cuid())
+  name        String
+  type        ComponentType
+  description String?
+  
+  // Component configuration
+  config      Json          // Stores component configuration schema
+  preview     String?       // Preview image URL
+  
+  // Usage tracking
+  timesUsed   Int           @default(0)
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+enum ComponentType {
+  TEXT_BLOCK
+  VIDEO_PLAYER
+  IMAGE_GALLERY
+  QUIZ_MULTIPLE_CHOICE
+  QUIZ_TRUE_FALSE
+  FILE_DOWNLOAD
+  AUDIO_PLAYER
+  CODE_EDITOR
+  INTERACTIVE_WIDGET
+  FORM_INPUT
+  PROGRESS_BAR
+  DIVIDER
+  SPACER
+}

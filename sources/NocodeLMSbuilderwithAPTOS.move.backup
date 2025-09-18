@@ -1,0 +1,282 @@
+module lms_platform::course_payments {
+    use std::signer;
+    use std::vector;
+    use std::string::{Self, String};
+    use aptos_framework::coin;
+    use aptos_framework::aptos_coin::AptosCoin;
+    use aptos_framework::timestamp;
+    use aptos_framework::account;
+
+    /// Error codes
+    const E_NOT_AUTHORIZED: u64 = 1;
+    const E_COURSE_NOT_FOUND: u64 = 2;
+    const E_ALREADY_ENROLLED: u64 = 3;
+    const E_INSUFFICIENT_PAYMENT: u64 = 4;
+    const E_COURSE_NOT_PUBLISHED: u64 = 5;
+
+    /// Course status
+    const COURSE_DRAFT: u8 = 0;
+    const COURSE_PUBLISHED: u8 = 1;
+    const COURSE_ARCHIVED: u8 = 2;
+
+    /// Course structure
+    struct Course has key, store {
+        id: u64,
+        title: String,
+        description: String,
+        instructor: address,
+        price: u64, // Price in APT (smallest unit)
+        status: u8,
+        created_at: u64,
+        updated_at: u64,
+        total_lessons: u64,
+        enrolled_students: u64,
+    }
+
+    /// Enrollment record
+    struct Enrollment has key, store {
+        student: address,
+        course_id: u64,
+        enrolled_at: u64,
+        progress: u64, // Percentage completed (0-100)
+        completed: bool,
+        completion_date: u64,
+    }
+
+    /// Platform data structure
+    struct Platform has key {
+        courses: vector<Course>,
+        next_course_id: u64,
+        platform_fee_percentage: u64, // Platform fee as percentage (e.g., 5 = 5%)
+        platform_owner: address,
+        total_revenue: u64,
+    }
+
+    /// Student enrollments
+    struct StudentEnrollments has key {
+        enrollments: vector<Enrollment>,
+    }
+
+    /// Initialize the platform
+    public entry fun initialize_platform(
+        account: &signer,
+        platform_fee_percentage: u64
+    ) {
+        let platform_owner = signer::address_of(account);
+        
+        move_to(account, Platform {
+            courses: vector::empty<Course>(),
+            next_course_id: 1,
+            platform_fee_percentage,
+            platform_owner,
+            total_revenue: 0,
+        });
+    }
+
+    /// Create a new course
+    public entry fun create_course(
+        instructor: &signer,
+        title: String,
+        description: String,
+        price: u64,
+        total_lessons: u64
+    ) acquires Platform {
+        let instructor_addr = signer::address_of(instructor);
+        let platform = borrow_global_mut<Platform>(@lms_platform);
+        
+        let course = Course {
+            id: platform.next_course_id,
+            title,
+            description,
+            instructor: instructor_addr,
+            price,
+            status: COURSE_DRAFT,
+            created_at: timestamp::now_seconds(),
+            updated_at: timestamp::now_seconds(),
+            total_lessons,
+            enrolled_students: 0,
+        };
+
+        vector::push_back(&mut platform.courses, course);
+        platform.next_course_id = platform.next_course_id + 1;
+    }
+
+    /// Publish a course (make it available for enrollment)
+    public entry fun publish_course(
+        instructor: &signer,
+        course_id: u64
+    ) acquires Platform {
+        let instructor_addr = signer::address_of(instructor);
+        let platform = borrow_global_mut<Platform>(@lms_platform);
+        
+        let course_ref = get_course_mut(&mut platform.courses, course_id);
+        assert!(course_ref.instructor == instructor_addr, E_NOT_AUTHORIZED);
+        
+        course_ref.status = COURSE_PUBLISHED;
+        course_ref.updated_at = timestamp::now_seconds();
+    }
+
+    /// Enroll in a course with APT payment
+    public entry fun enroll_in_course(
+        student: &signer,
+        course_id: u64,
+        platform_addr: address
+    ) acquires Platform, StudentEnrollments {
+        let student_addr = signer::address_of(student);
+        let platform = borrow_global_mut<Platform>(platform_addr);
+        
+        let course_ref = get_course_mut(&mut platform.courses, course_id);
+        assert!(course_ref.status == COURSE_PUBLISHED, E_COURSE_NOT_PUBLISHED);
+        
+        // Check if student is already enrolled
+        if (exists<StudentEnrollments>(student_addr)) {
+            let enrollments = borrow_global<StudentEnrollments>(student_addr);
+            assert!(!is_already_enrolled(&enrollments.enrollments, course_id), E_ALREADY_ENROLLED);
+        };
+
+        // Process payment
+        let course_price = course_ref.price;
+        let platform_fee = (course_price * platform.platform_fee_percentage) / 100;
+        let instructor_payment = course_price - platform_fee;
+
+        // Transfer APT from student to instructor
+        coin::transfer<AptosCoin>(student, course_ref.instructor, instructor_payment);
+        
+        // Transfer platform fee to platform owner
+        if (platform_fee > 0) {
+            coin::transfer<AptosCoin>(student, platform.platform_owner, platform_fee);
+        };
+
+        // Update platform revenue
+        platform.total_revenue = platform.total_revenue + course_price;
+
+        // Create enrollment record
+        let enrollment = Enrollment {
+            student: student_addr,
+            course_id,
+            enrolled_at: timestamp::now_seconds(),
+            progress: 0,
+            completed: false,
+            completion_date: 0,
+        };
+
+        // Add to student's enrollments
+        if (!exists<StudentEnrollments>(student_addr)) {
+            move_to(student, StudentEnrollments {
+                enrollments: vector::empty<Enrollment>(),
+            });
+        };
+
+        let student_enrollments = borrow_global_mut<StudentEnrollments>(student_addr);
+        vector::push_back(&mut student_enrollments.enrollments, enrollment);
+
+        // Update course enrolled students count
+        course_ref.enrolled_students = course_ref.enrolled_students + 1;
+    }
+
+    /// Update course progress
+    public entry fun update_progress(
+        student: &signer,
+        course_id: u64,
+        new_progress: u64
+    ) acquires StudentEnrollments {
+        let student_addr = signer::address_of(student);
+        assert!(exists<StudentEnrollments>(student_addr), E_NOT_AUTHORIZED);
+        
+        let enrollments = borrow_global_mut<StudentEnrollments>(student_addr);
+        let enrollment_ref = get_enrollment_mut(&mut enrollments.enrollments, course_id);
+        
+        enrollment_ref.progress = new_progress;
+        
+        // Mark as completed if progress is 100%
+        if (new_progress >= 100 && !enrollment_ref.completed) {
+            enrollment_ref.completed = true;
+            enrollment_ref.completion_date = timestamp::now_seconds();
+        };
+    }
+
+    /// Helper function to get course by ID
+    fun get_course_mut(courses: &mut vector<Course>, course_id: u64): &mut Course {
+        let i = 0;
+        let len = vector::length(courses);
+        while (i < len) {
+            let course = vector::borrow_mut(courses, i);
+            if (course.id == course_id) {
+                return course
+            };
+            i = i + 1;
+        };
+        abort E_COURSE_NOT_FOUND
+    }
+
+    /// Helper function to get enrollment by course ID
+    fun get_enrollment_mut(enrollments: &mut vector<Enrollment>, course_id: u64): &mut Enrollment {
+        let i = 0;
+        let len = vector::length(enrollments);
+        while (i < len) {
+            let enrollment = vector::borrow_mut(enrollments, i);
+            if (enrollment.course_id == course_id) {
+                return enrollment
+            };
+            i = i + 1;
+        };
+        abort E_COURSE_NOT_FOUND
+    }
+
+    /// Helper function to check if student is already enrolled
+    fun is_already_enrolled(enrollments: &vector<Enrollment>, course_id: u64): bool {
+        let i = 0;
+        let len = vector::length(enrollments);
+        while (i < len) {
+            let enrollment = vector::borrow(enrollments, i);
+            if (enrollment.course_id == course_id) {
+                return true
+            };
+            i = i + 1;
+        };
+        false
+    }
+
+    /// View functions for frontend integration
+
+    #[view]
+    public fun get_course_details(platform_addr: address, course_id: u64): (String, String, address, u64, u8, u64, u64) acquires Platform {
+        let platform = borrow_global<Platform>(platform_addr);
+        let course = get_course(&platform.courses, course_id);
+        (course.title, course.description, course.instructor, course.price, course.status, course.total_lessons, course.enrolled_students)
+    }
+
+    #[view]
+    public fun get_student_enrollments(student_addr: address): vector<u64> acquires StudentEnrollments {
+        if (!exists<StudentEnrollments>(student_addr)) {
+            return vector::empty<u64>()
+        };
+        
+        let enrollments = borrow_global<StudentEnrollments>(student_addr);
+        let course_ids = vector::empty<u64>();
+        let i = 0;
+        let len = vector::length(&enrollments.enrollments);
+        
+        while (i < len) {
+            let enrollment = vector::borrow(&enrollments.enrollments, i);
+            vector::push_back(&mut course_ids, enrollment.course_id);
+            i = i + 1;
+        };
+        
+        course_ids
+    }
+
+    /// Helper function to get course by ID (read-only)
+    fun get_course(courses: &vector<Course>, course_id: u64): &Course {
+        let i = 0;
+        let len = vector::length(courses);
+        while (i < len) {
+            let course = vector::borrow(courses, i);
+            if (course.id == course_id) {
+                return course
+            };
+            i = i + 1;
+        };
+        abort E_COURSE_NOT_FOUND
+    }
+}

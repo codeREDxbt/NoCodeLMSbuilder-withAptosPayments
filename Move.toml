@@ -1,0 +1,16 @@
+[package]
+name = "lms_platform"
+version = "1.0.0"
+authors = ["codeRED"]
+
+[addresses]
+lms_platform = "0x9e1ce87a71fcfe3322e03bf7e87243ad1052ff6f6b0b08981efc55ebff0a581e"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]
