@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { AptosPayment } from '@/components/aptos/aptos-payment'
 import {
   BookOpen,
   Star,
@@ -36,6 +37,7 @@ export default function CourseDetailPage() {
   const params = useParams()
   const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showPayment, setShowPayment] = useState(false)
 
   useEffect(() => {
     const courseId = params.id as string
@@ -76,7 +78,18 @@ export default function CourseDetailPage() {
   }, [params.id])
 
   const enrollInCourse = () => {
-    alert('Redirecting to Aptos wallet for payment...')
+    setShowPayment(true)
+  }
+
+  const handlePaymentSuccess = (transactionHash: string) => {
+    console.log('Payment successful:', transactionHash)
+    // Here you would typically update the enrollment status
+    alert(`Enrollment successful! Transaction: ${transactionHash.slice(0, 10)}...`)
+  }
+
+  const handlePaymentError = (error: string) => {
+    console.error('Payment failed:', error)
+    alert(`Payment failed: ${error}`)
   }
 
   if (loading) {
@@ -152,26 +165,36 @@ export default function CourseDetailPage() {
           </div>
 
           <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl">${course.price} <span className="text-sm font-normal">{course.currency}</span></CardTitle>
-                <CardDescription>Lifetime access to this course</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button size="lg" className="w-full" onClick={enrollInCourse}>
-                  Enroll Now
-                </Button>
-                <div className="mt-4 text-sm text-gray-500">
-                  <p className="font-bold mb-2">This course includes:</p>
-                  <ul className="space-y-2">
-                    <li className="flex items-center"><Clock className="w-4 h-4 mr-2" />{course.duration} on-demand video</li>
-                    <li className="flex items-center"><BookOpen className="w-4 h-4 mr-2" />{course.lessons} articles & resources</li>
-                    <li className="flex items-center"><Play className="w-4 h-4 mr-2" />Access on mobile and TV</li>
-                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2" />Certificate of completion</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
+            {!showPayment ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-2xl">${course.price} <span className="text-sm font-normal">{course.currency}</span></CardTitle>
+                  <CardDescription>Lifetime access to this course</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button size="lg" className="w-full" onClick={enrollInCourse}>
+                    Enroll Now
+                  </Button>
+                  <div className="mt-4 text-sm text-gray-500">
+                    <p className="font-bold mb-2">This course includes:</p>
+                    <ul className="space-y-2">
+                      <li className="flex items-center"><Clock className="w-4 h-4 mr-2" />{course.duration} on-demand video</li>
+                      <li className="flex items-center"><BookOpen className="w-4 h-4 mr-2" />{course.lessons} articles & resources</li>
+                      <li className="flex items-center"><Play className="w-4 h-4 mr-2" />Access on mobile and TV</li>
+                      <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2" />Certificate of completion</li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <AptosPayment
+                courseId={course.id}
+                courseTitle={course.title}
+                price={course.price}
+                onPaymentSuccess={handlePaymentSuccess}
+                onPaymentError={handlePaymentError}
+              />
+            )}
           </div>
         </div>
       </main>

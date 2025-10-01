@@ -3,7 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "description": "A complete NoCode LMS platform with Aptos blockchain payments and demo user functionality",
-  "keywords": ["lms", "education", "aptos", "blockchain", "nextjs", "learning-platform"],
+  "keywords": [
+    "lms",
+    "education",
+    "aptos",
+    "blockchain",
+    "nextjs",
+    "learning-platform"
+  ],
   "author": "codeREDxbt",
   "repository": {
     "type": "git",
@@ -28,6 +35,7 @@
   },
   "dependencies": {
     "@aptos-labs/ts-sdk": "^1.26.0",
+    "@aptos-labs/wallet-adapter-ant-design": "^5.2.0",
     "@aptos-labs/wallet-adapter-react": "^3.8.0",
     "@dnd-kit/core": "^6.1.0",
     "@dnd-kit/modifiers": "^7.0.0",

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import WalletModal from '@/components/wallet/wallet-modal'
 import { 
   BookOpen, 
   Plus, 
@@ -151,6 +152,7 @@ export default function DashboardPage() {
             </Link>
             
             <div className="flex items-center space-x-4">
+              <WalletModal />
               <div className="text-right">
                 <div className="text-sm font-medium text-gray-900">
                   {user.name} 
