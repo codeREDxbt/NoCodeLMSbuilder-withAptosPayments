@@ -17,7 +17,7 @@ interface AptosPaymentProps {
   onPaymentError: (error: string) => void
 }
 
-export function AptosPayment({ 
+function AptosPayment({ 
   courseId, 
   courseTitle, 
   price, 
