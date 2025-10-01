@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -48,7 +48,7 @@ interface Course {
   published: boolean
 }
 
-export default function CourseBuilderPage() {
+function CourseBuilderContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const courseId = searchParams.get('courseId')
@@ -543,5 +543,13 @@ export default function CourseBuilderPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CourseBuilderPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div>Loading...</div></div>}>
+      <CourseBuilderContent />
+    </Suspense>
   )
 }
