@@ -1,188 +1,180 @@
-import { WalletConnection } from '@/components/wallet/wallet-connection'
-import { CourseEnrollment } from '@/components/course/course-enrollment'
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Users, Star, BookOpen } from 'lucide-react'
+import {
+  BookOpen,
+  Star,
+  Users,
+  Clock,
+  CheckCircle,
+  ArrowLeft,
+  ShoppingCart,
+  Play,
+} from 'lucide-react'
 
-// Sample course data
-const sampleCourse = {
-  id: "1",
-  title: "Introduction to Blockchain Development",
-  description: "Learn the fundamentals of blockchain technology and smart contract development on Aptos.",
-  price: 0.1, // 0.1 APT
-  instructor: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", // Sample instructor address
-  aptosContractAddress: undefined, // Will use simple transfer for demo
-  aptosCourseId: "1",
-  duration: 240, // 4 hours
-  level: "Beginner",
-  students: 1250,
-  rating: 4.8,
-  lessons: [
-    "What is Blockchain?",
-    "Understanding Aptos",
-    "Move Programming Language Basics",
-    "Writing Your First Smart Contract",
-    "Deploying to Testnet"
-  ]
+interface Course {
+  id: string
+  title: string
+  description: string
+  price: number
+  currency: string
+  students: number
+  lessons: number
+  duration: string
+  rating: number
+  instructor: string
+  category: string
+  level: string
 }
 
-export default function CoursePage() {
-  const handleEnrollmentSuccess = (transactionHash: string) => {
-    console.log('Enrollment successful! Transaction:', transactionHash)
-    // Here you would typically update the UI, redirect to course content, etc.
+export default function CourseDetailPage() {
+  const params = useParams()
+  const [course, setCourse] = useState<Course | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const courseId = params.id as string
+    const mockCourses: { [key: string]: Course } = {
+      '1': {
+        id: '1',
+        title: 'Complete Web Development Bootcamp',
+        description: 'Learn HTML, CSS, JavaScript, React, and Node.js from scratch.',
+        price: 99.99,
+        currency: 'APT',
+        students: 1247,
+        lessons: 45,
+        duration: '40 hours',
+        rating: 4.8,
+        instructor: 'John Doe',
+        category: 'Development',
+        level: 'Beginner',
+      },
+      '2': {
+        id: '2',
+        title: 'Blockchain Fundamentals with Aptos',
+        description: 'Understanding cryptocurrency and the Aptos ecosystem.',
+        price: 149.99,
+        currency: 'APT',
+        students: 892,
+        lessons: 32,
+        duration: '25 hours',
+        rating: 4.9,
+        instructor: 'Sarah Johnson',
+        category: 'Blockchain',
+        level: 'Intermediate',
+      },
+    }
+
+    const selectedCourse = mockCourses[courseId] || mockCourses['1']
+    setCourse(selectedCourse)
+    setLoading(false)
+  }, [params.id])
+
+  const enrollInCourse = () => {
+    alert('Redirecting to Aptos wallet for payment...')
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div>Loading...</div>
+      </div>
+    )
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div>Course not found</div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Course Information */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-2xl mb-2">{sampleCourse.title}</CardTitle>
-                    <CardDescription className="text-base">
-                      {sampleCourse.description}
-                    </CardDescription>
-                  </div>
-                  <Badge variant="secondary">{sampleCourse.level}</Badge>
-                </div>
-                
-                <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                  <div className="flex items-center space-x-1">
-                    <Clock className="h-4 w-4" />
-                    <span>{Math.floor(sampleCourse.duration / 60)}h {sampleCourse.duration % 60}m</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Users className="h-4 w-4" />
-                    <span>{sampleCourse.students.toLocaleString()} students</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span>{sampleCourse.rating}</span>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <Link href="/" className="flex items-center">
+              <BookOpen className="h-8 w-8 text-indigo-600" />
+              <span className="ml-3 text-2xl font-bold text-gray-900">NoCodeLMS</span>
+            </Link>
+            <div className="flex items-center space-x-4">
+              <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+                Dashboard
+              </Link>
+              <Button variant="ghost" size="icon">
+                <ShoppingCart className="h-6 w-6" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
 
-            {/* Course Content */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <BookOpen className="h-5 w-5" />
-                  <span>Course Content</span>
-                </CardTitle>
-                <CardDescription>
-                  {sampleCourse.lessons.length} lessons in this course
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {sampleCourse.lessons.map((lesson, index) => (
-                    <div key={index} className="flex items-center space-x-3 p-3 border rounded-lg">
-                      <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-primary">{index + 1}</span>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium">{lesson}</h4>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2">
+            <div className="mb-4">
+              <Link href="/dashboard" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 flex items-center">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Courses
+              </Link>
+            </div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 mb-2">{course.title}</h1>
+            <p className="text-lg text-gray-600 mb-6">{course.description}</p>
 
-            {/* What You'll Learn */}
-            <Card>
-              <CardHeader>
-                <CardTitle>What You'll Learn</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  <li className="flex items-start space-x-2">
-                    <span className="flex-shrink-0 w-2 h-2 bg-primary rounded-full mt-2"></span>
-                    <span>Understand the fundamentals of blockchain technology</span>
-                  </li>
-                  <li className="flex items-start space-x-2">
-                    <span className="flex-shrink-0 w-2 h-2 bg-primary rounded-full mt-2"></span>
-                    <span>Learn the Move programming language</span>
-                  </li>
-                  <li className="flex items-start space-x-2">
-                    <span className="flex-shrink-0 w-2 h-2 bg-primary rounded-full mt-2"></span>
-                    <span>Build and deploy smart contracts on Aptos</span>
-                  </li>
-                  <li className="flex items-start space-x-2">
-                    <span className="flex-shrink-0 w-2 h-2 bg-primary rounded-full mt-2"></span>
-                    <span>Interact with the Aptos blockchain using TypeScript</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
+            <div className="flex items-center mb-6 space-x-4">
+              <div className="flex items-center">
+                <Star className="w-5 h-5 text-yellow-400" />
+                <span className="ml-1 font-bold text-gray-800">{course.rating}</span>
+                <span className="ml-1 text-sm text-gray-500">(1,280 ratings)</span>
+              </div>
+              <div className="flex items-center">
+                <Users className="w-5 h-5 text-gray-500" />
+                <span className="ml-1 text-sm text-gray-800">{course.students} students</span>
+              </div>
+            </div>
+
+            <div className="prose prose-lg max-w-none">
+              <h2>What you'll learn</h2>
+              <ul>
+                <li>Build amazing single-page applications with React and Next.js.</li>
+                <li>Master fundamental concepts in blockchain and the Aptos ecosystem.</li>
+                <li>Create and deploy smart contracts on the Aptos network.</li>
+                <li>Learn to build secure and scalable web applications.</li>
+              </ul>
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Wallet Connection */}
-            <WalletConnection />
-
-            {/* Course Enrollment */}
-            <CourseEnrollment 
-              course={sampleCourse}
-              onEnrollmentSuccess={handleEnrollmentSuccess}
-            />
-
-            {/* Course Stats */}
+          <div>
             <Card>
               <CardHeader>
-                <CardTitle>Course Stats</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-sm">Total Students</span>
-                  <span className="font-medium">{sampleCourse.students.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Average Rating</span>
-                  <span className="font-medium">{sampleCourse.rating}/5.0</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Duration</span>
-                  <span className="font-medium">
-                    {Math.floor(sampleCourse.duration / 60)}h {sampleCourse.duration % 60}m
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Level</span>
-                  <span className="font-medium">{sampleCourse.level}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Instructor Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Instructor</CardTitle>
+                <CardTitle className="text-2xl">${course.price} <span className="text-sm font-normal">{course.currency}</span></CardTitle>
+                <CardDescription>Lifetime access to this course</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center space-y-3">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mx-auto flex items-center justify-center text-white font-semibold text-lg">
-                    BC
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Blockchain Expert</h4>
-                    <p className="text-sm text-muted-foreground">Senior Developer & Instructor</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground font-mono">
-                    {sampleCourse.instructor.slice(0, 10)}...{sampleCourse.instructor.slice(-10)}
-                  </p>
+                <Button size="lg" className="w-full" onClick={enrollInCourse}>
+                  Enroll Now
+                </Button>
+                <div className="mt-4 text-sm text-gray-500">
+                  <p className="font-bold mb-2">This course includes:</p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center"><Clock className="w-4 h-4 mr-2" />{course.duration} on-demand video</li>
+                    <li className="flex items-center"><BookOpen className="w-4 h-4 mr-2" />{course.lessons} articles & resources</li>
+                    <li className="flex items-center"><Play className="w-4 h-4 mr-2" />Access on mobile and TV</li>
+                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2" />Certificate of completion</li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

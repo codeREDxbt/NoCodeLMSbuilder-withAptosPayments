@@ -31,6 +31,23 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* Demo Banner */}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center justify-center text-center">
+            <div className="flex items-center space-x-2">
+              <span className="text-lg">🚀</span>
+              <span className="text-sm font-medium">
+                Live Demo - Try our platform with demo accounts! 
+                <Link href="/auth/signin" className="underline ml-1 hover:text-indigo-200">
+                  Sign in as Instructor, Student, or Admin
+                </Link>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center">
